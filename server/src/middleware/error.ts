@@ -34,9 +34,4 @@ export default function globalErrorMiddleware(err: any, req: Request, res: Respo
     message: err.message,
     error: err.name
   })
-  console.log('first', {
-    success: false,
-    message: err.message,
-    error: err.name
-  })
 }
