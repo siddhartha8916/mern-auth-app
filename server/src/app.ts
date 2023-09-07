@@ -17,6 +17,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')))
 
 // app.use('/v1', api)
 
+// Will show public/index.html if on home route - default behaviour
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Working!' })
 })
