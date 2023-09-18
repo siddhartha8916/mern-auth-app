@@ -44,7 +44,13 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     .then(() => {
       next() // Continue to the next middleware or route handler
     })
-    .catch(() => {
-      res.status(429).send('Too Many Requests') // Send a "Too Many Requests" response if the rate limit is exceeded
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .catch((rlRejected: any) => {
+      const retryAfter = String(Math.round(rlRejected.msBeforeNext / 1000)) || '1'
+      res.set('Retry-After', retryAfter)
+      res.status(429).json({
+        success: false,
+        message: `Too Many Requests - Retry After ${retryAfter} seconds`
+      }) // Send a "Too Many Requests" response if the rate limit is exceeded
     })
 }
