@@ -6,7 +6,10 @@
     "emitDecoratorMetadata": true,
     "module": "commonjs",
     "moduleResolution": "node",
-    "baseUrl": "src/",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "typeRoots": ["./src/types", "./node_modules/@types"],
     "resolveJsonModule": true,
     "outDir": "./dist",

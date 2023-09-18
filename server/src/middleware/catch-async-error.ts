@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 
-type AsyncMiddleware = (req: Request, res: Response, next: NextFunction) => Promise<void>
+// Define the type for asyncError
+type AsyncErrorHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>
 
-const asyncMiddleware = (asyncError: AsyncMiddleware) => (req: Request, res: Response, next: NextFunction) => {
+const catchAsyncError = (asyncError: AsyncErrorHandler) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(asyncError(req, res, next)).catch(next)
 }
 
-export default asyncMiddleware
+export default catchAsyncError

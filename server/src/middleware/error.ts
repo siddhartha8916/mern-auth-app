@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import ErrorHandler from '../utils/error-handler'
+import ErrorHandler from '@/utils/error-handler'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 export default function globalErrorMiddleware(err: any, req: Request, res: Response, next: NextFunction) {
@@ -8,12 +8,6 @@ export default function globalErrorMiddleware(err: any, req: Request, res: Respo
 
   if (err.name === 'CastError') {
     const message = `Resource not found. Invalid: ${err.path}`
-    err = new ErrorHandler(message, 400)
-  }
-
-  // Mongoose Duplicate Key Error
-  if (err.code === 11000) {
-    const message = `Duplicate ${Object.keys(err.keyValue)} Entered`
     err = new ErrorHandler(message, 400)
   }
 
@@ -29,8 +23,19 @@ export default function globalErrorMiddleware(err: any, req: Request, res: Respo
     err = new ErrorHandler(message, 400)
   }
 
+  if (err.name === 'PrismaClientKnownRequestError') {
+    let message = 'Some Validations Failed'
+
+    if (err.code === 'P2002') {
+      console.log(err.meta)
+      const validationErrors = err.meta.target.map((field: string) => `${field}`).join(',')
+      message = `Validations failed on ${validationErrors}`
+    }
+    err = new ErrorHandler(message, 400)
+  }
+
   res.status(err.statusCode).json({
-    success: false,
+    status: false,
     message: err.message,
     error: err.name
   })
