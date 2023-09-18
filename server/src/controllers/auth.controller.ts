@@ -13,9 +13,11 @@ import {
 } from '@/middleware/rate-limiters'
 import ErrorHandler from '@/utils/error-handler'
 
+// Function to generate a unique key combining username and IP
 const getUsernameIPkey = (username: string, ip: string) => `${username}_${ip}`
 
 class AuthController {
+  // Register a new user
   static register = catchAsyncError(async (req: Request, res: Response) => {
     const { email, password } = req.body
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -28,11 +30,15 @@ class AuthController {
     res.status(201).json(jsonResponse)
   })
 
+  // Handle user login
   static login = catchAsyncError(async (req: Request, res: Response) => {
     const { email, password } = req.body
+
+    // Check for missing email or password
     if (!email || !password) {
       throw new ErrorHandler('Missing Email or Password', 404)
     }
+
     const errorMessage = 'Invalid Credentials'
 
     const ipAddr = req.ip
@@ -53,12 +59,9 @@ class AuthController {
     }
 
     if (retrySecs > 0) {
+      // Set Retry-After header and throw an error for rate limiting
       res.set('Retry-After', String(retrySecs))
-      const jsonResponse: APIResponse = {
-        status: false,
-        message: 'Too Many Requests'
-      }
-      res.status(429).json(jsonResponse)
+      throw new ErrorHandler(`Too Many Requests - Retry After ${retrySecs} seconds`, 429)
     } else {
       const user = await AuthService.login(email)
 
@@ -67,18 +70,15 @@ class AuthController {
         try {
           await limiterSlowBruteByIP.consume(ipAddr)
           throw new ErrorHandler(errorMessage, 404)
-
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (rlRejected: any) {
           if (rlRejected instanceof Error) {
             throw rlRejected
           } else {
-            res.set('Retry-After', String(Math.round(rlRejected.msBeforeNext / 1000)) || '1')
-            const jsonResponse: APIResponse = {
-              status: false,
-              message: 'Too Many Requests'
-            }
-            res.status(429).json(jsonResponse)
+            const retryAfter = String(Math.round(rlRejected.msBeforeNext / 1000)) || '1'
+            // Set Retry-After header and throw an error for rate limiting
+            res.set('Retry-After', retryAfter)
+            throw new ErrorHandler(`Too Many Requests - Retry After ${retryAfter} seconds`, 429)
           }
         }
       }
@@ -92,7 +92,7 @@ class AuthController {
         }
 
         if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > 0) {
-          // Reset on successful authorisation
+          // Reset on successful authorization
           await limiterConsecutiveFailsByUsernameAndIP.delete(usernameIPkey)
         }
 

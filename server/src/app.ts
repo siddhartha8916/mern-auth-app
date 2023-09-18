@@ -7,17 +7,16 @@ import helmet from 'helmet'
 import globalErrorMiddleware from './middleware/error'
 import ErrorHandler from './utils/error-handler'
 import router from './routes'
-// import rateLimiterMiddleware from './middleware/rate-limiter-middleware'
+import { rateLimiterMiddleware } from './middleware/rate-limiters'
 
 const app: Express = express()
+app.use(rateLimiterMiddleware)
 
 const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' })
 app.use(morgan('combined', { stream: accessLogStream }))
 
 app.use(helmet())
 app.disable('x-powered-by')
-
-// app.use(rateLimiterMiddleware)
 
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '..', 'public')))
