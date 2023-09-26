@@ -5,16 +5,15 @@ import omit from 'lodash/omit'
 import { APIResponse } from '@/types/app.types'
 import catchAsyncError from '@/middleware/catch-async-error'
 import AuthService from '@/services/auth.service'
-import {
-  limiterConsecutiveFailsByUsernameAndIP,
-  limiterSlowBruteByIP,
-  maxConsecutiveFailsByUsernameAndIP,
-  maxWrongAttemptsByIPperDay
-} from '@/middleware/rate-limiters'
 import ErrorHandler from '@/utils/error-handler'
-
-// Function to generate a unique key combining username and IP
-const getUsernameIPkey = (username: string, ip: string) => `${username}_${ip}`
+import { calculateCookieExpiration } from '@/utils/helpers'
+import { generateToken } from '@/utils/jwt'
+import {
+  checkLoginRateByUsernameOrEmailAndIPAddress,
+  consumeFailedAttemptForNonRegisteredUser,
+  consumeFailedAttemptForRegisteredUser,
+  deleteFailedAttemptForRegisteredUserOnSuccessfulLogin
+} from '@/utils/login-rate-limiter'
 
 class AuthController {
   // Register a new user
@@ -32,31 +31,19 @@ class AuthController {
 
   // Handle user login
   static login = catchAsyncError(async (req: Request, res: Response) => {
+    const errorMessage = 'Invalid Credentials'
     const { email, password, username } = req.body
+    const redisIdentifierKey = email || username
 
     // Check for missing email or password
     if ((!email && !username) || !password) {
       throw new ErrorHandler('Missing Email or Password or Username', 404)
     }
 
-    const errorMessage = 'Invalid Credentials'
-
-    const ipAddr = req.ip
-    const usernameIPkey = getUsernameIPkey(req.body.email, ipAddr)
-
-    const [resUsernameAndIP, resSlowByIP] = await Promise.all([
-      limiterConsecutiveFailsByUsernameAndIP.get(usernameIPkey),
-      limiterSlowBruteByIP.get(ipAddr)
-    ])
-
-    let retrySecs = 0
-
-    // Check if IP or Username + IP is already blocked
-    if (resSlowByIP !== null && resSlowByIP.consumedPoints > maxWrongAttemptsByIPperDay) {
-      retrySecs = Math.round(resSlowByIP.msBeforeNext / 1000) || 1
-    } else if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > maxConsecutiveFailsByUsernameAndIP) {
-      retrySecs = Math.round(resUsernameAndIP.msBeforeNext / 1000) || 1
-    }
+    const { retrySecs, resUsernameAndIP } = await checkLoginRateByUsernameOrEmailAndIPAddress(
+      redisIdentifierKey,
+      req.ip
+    )
 
     if (retrySecs > 0) {
       // Set Retry-After header and throw an error for rate limiting
@@ -68,7 +55,7 @@ class AuthController {
       if (!user) {
         // Consume 1 point from limiters on wrong attempt and block if limits reached
         try {
-          await limiterSlowBruteByIP.consume(ipAddr)
+          await consumeFailedAttemptForNonRegisteredUser(req.ip)
           throw new ErrorHandler(errorMessage, 404)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (rlRejected: any) {
@@ -87,19 +74,33 @@ class AuthController {
 
         if (!isPasswordCorrect) {
           // Count failed attempts by Username + IP only for registered users
-          await limiterConsecutiveFailsByUsernameAndIP.consume(usernameIPkey)
+          await consumeFailedAttemptForRegisteredUser(redisIdentifierKey, req.ip)
+          await consumeFailedAttemptForNonRegisteredUser(req.ip)
           throw new ErrorHandler(errorMessage, 400)
         }
 
         if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > 0) {
           // Reset on successful authorization
-          await limiterConsecutiveFailsByUsernameAndIP.delete(usernameIPkey)
+          await deleteFailedAttemptForRegisteredUserOnSuccessfulLogin(redisIdentifierKey, req.ip)
         }
 
-        const loginResponse = omit({ ...user }, ['password'])
+        const token = generateToken(user)
+        const loginResponse = omit({ ...user, token }, ['password'])
+        const cookieExpiresIn = calculateCookieExpiration(1, 'min')
 
-        const jsonResponse: APIResponse = { status: true, message: 'User Logged in Successfully', data: loginResponse }
-        res.status(200).json(jsonResponse)
+        const loginJSONResponse: APIResponse = {
+          status: true,
+          message: 'User Logged in Successfully',
+          data: loginResponse
+        }
+        res
+          .cookie('access_token', token, {
+            httpOnly: true,
+            expires: cookieExpiresIn,
+            path: '/'
+          })
+          .status(200)
+          .json(loginJSONResponse)
       }
     }
   })

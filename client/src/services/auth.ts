@@ -23,16 +23,19 @@ export const useRegister = () => {
 };
 
 const loginUser = async ({
-  email,
-  password,
+  body: { email, password },
 }: {
-  email: string;
-  password: string;
+  body: { email: string; password: string };
 }): Promise<any> => {
-  const response = await apiClient.post(apiPaths.LOGIN, {
-    email,
-    password,
-  });
+  const response = await apiClient.post(
+    apiPaths.LOGIN,
+    {
+      email,
+      password,
+    },
+    {},
+    { withCredentials: true }
+  );
 
   return response;
 };

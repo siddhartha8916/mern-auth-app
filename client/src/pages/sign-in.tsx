@@ -1,7 +1,11 @@
+import SignInForm from "@/components/auth/sign-in/sign-in-form";
+
 const SignIn = () => {
   return (
-    <div>SignIn</div>
-  )
-}
+    <div className="max-w-md mx-auto">
+      <SignInForm />
+    </div>
+  );
+};
 
-export default SignIn
+export default SignIn;

@@ -7,6 +7,7 @@ export const maxWrongAttemptsByIPperDay = 5
 
 // Maximum allowed consecutive fails by username and IP
 export const maxConsecutiveFailsByUsernameAndIP = 10
+export const maxConsecutiveFailsByEmailAndIP = 10
 
 // Maximum allowed consecutive requests per IP per second
 const maxConsecutiveLimitPerIP = 10
@@ -21,9 +22,9 @@ export const limiterSlowBruteByIP = new RateLimiterRedis({
 })
 
 // Rate limiter for blocking username and IP after consecutive failures
-export const limiterConsecutiveFailsByUsernameAndIP = new RateLimiterRedis({
+export const limiterConsecutiveFailsByUsernameOrEmailAndIP = new RateLimiterRedis({
   storeClient: redisClient,
-  keyPrefix: 'login_fail_consecutive_username_and_ip',
+  keyPrefix: 'login_fail_consecutive_username_or_email_and_ip',
   points: maxConsecutiveFailsByUsernameAndIP,
   duration: 60 * 60 * 24 * 90, // Store number for 90 days since first fail
   blockDuration: 60 * 60 // Block for 1 hour
