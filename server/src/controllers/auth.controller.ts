@@ -19,10 +19,10 @@ const getUsernameIPkey = (username: string, ip: string) => `${username}_${ip}`
 class AuthController {
   // Register a new user
   static register = catchAsyncError(async (req: Request, res: Response) => {
-    const { email, password } = req.body
+    const { email, password, username } = req.body
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const newUser = await AuthService.register({ email, password: hashedPassword })
+    const newUser = await AuthService.register({ email, password: hashedPassword, username })
 
     const registerResponse = omit({ ...newUser }, ['password'])
 
@@ -32,11 +32,11 @@ class AuthController {
 
   // Handle user login
   static login = catchAsyncError(async (req: Request, res: Response) => {
-    const { email, password } = req.body
+    const { email, password, username } = req.body
 
     // Check for missing email or password
-    if (!email || !password) {
-      throw new ErrorHandler('Missing Email or Password', 404)
+    if ((!email && !username) || !password) {
+      throw new ErrorHandler('Missing Email or Password or Username', 404)
     }
 
     const errorMessage = 'Invalid Credentials'
@@ -63,7 +63,7 @@ class AuthController {
       res.set('Retry-After', String(retrySecs))
       throw new ErrorHandler(`Too Many Requests - Retry After ${retrySecs} seconds`, 429)
     } else {
-      const user = await AuthService.login(email)
+      const user = await AuthService.login(email, username)
 
       if (!user) {
         // Consume 1 point from limiters on wrong attempt and block if limits reached
@@ -99,7 +99,7 @@ class AuthController {
         const loginResponse = omit({ ...user }, ['password'])
 
         const jsonResponse: APIResponse = { status: true, message: 'User Logged in Successfully', data: loginResponse }
-        res.status(201).json(jsonResponse)
+        res.status(200).json(jsonResponse)
       }
     }
   })

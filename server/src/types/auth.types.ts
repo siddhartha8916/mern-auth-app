@@ -7,9 +7,11 @@ export interface I_UserRegistrationPromise {
 export interface I_UserRegistrationBody {
   email: string
   password: string
+  username: string
 }
 
 export interface I_UserLoginBody {
   email: string
   password: string
+  username: string
 }

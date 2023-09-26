@@ -10,17 +10,19 @@ class AuthService {
     const newUser = await prisma.user.create({
       data: {
         email: body.email,
-        password: body.password
+        password: body.password,
+        username: body.username
       }
     })
     return newUser
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static login = async (email: string): Promise<any> => {
+  static login = async (email: string, username: string): Promise<any> => {
     const user = await prisma.user.findUnique({
       where: {
-        email
+        email,
+        username
       }
     })
 

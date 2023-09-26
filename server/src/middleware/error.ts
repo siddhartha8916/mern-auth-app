@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextFunction, Request, Response } from 'express'
 import ErrorHandler from '@/utils/error-handler'
 
@@ -20,17 +21,6 @@ export default function globalErrorMiddleware(err: any, req: Request, res: Respo
   // Wrong JWT Expire
   if (err.name === 'TokenExpiredError') {
     const message = `Json Web Token is Expired, Try again !!`
-    err = new ErrorHandler(message, 400)
-  }
-
-  if (err.name === 'PrismaClientKnownRequestError') {
-    let message = 'Some Validations Failed'
-
-    if (err.code === 'P2002') {
-      console.log(err.meta)
-      const validationErrors = err.meta.target.map((field: string) => `${field}`).join(',')
-      message = `Validations failed on ${validationErrors}`
-    }
     err = new ErrorHandler(message, 400)
   }
 
