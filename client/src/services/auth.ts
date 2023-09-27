@@ -27,15 +27,10 @@ const loginUser = async ({
 }: {
   body: { email: string; password: string };
 }): Promise<any> => {
-  const response = await apiClient.post(
-    apiPaths.LOGIN,
-    {
-      email,
-      password,
-    },
-    {},
-    { withCredentials: true }
-  );
+  const response = await apiClient.post(apiPaths.LOGIN, {
+    email,
+    password,
+  });
 
   return response;
 };
