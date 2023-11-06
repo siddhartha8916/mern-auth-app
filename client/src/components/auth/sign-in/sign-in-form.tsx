@@ -16,7 +16,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin } from "@/services/auth";
 import { AxiosError } from "axios";
 import { toast } from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import OAuthLoginForm from "./o-auth-login-form";
 
 const formSchema = z.object({
   email: z.string().email(),
@@ -27,6 +28,7 @@ const formSchema = z.object({
 
 const SignInForm = () => {
   const { mutateAsync: loginUser, isLoading: isLoginUserLoading } = useLogin();
+  const navigate = useNavigate();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -47,6 +49,7 @@ const SignInForm = () => {
       });
       toast.success(response?.data?.message);
       form.reset();
+      navigate("/", { replace: true });
     } catch (error) {
       if (error instanceof AxiosError) {
         toast.error(error?.response?.data?.message || "Unable to login");
@@ -95,6 +98,7 @@ const SignInForm = () => {
           </Button>
         </form>
       </Form>
+      <OAuthLoginForm />
       <div className="flex items-center justify-between mt-5">
         <p className="font-medium text-blue-600">Don't have an account?</p>
         <Link

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 
-export const generateToken = (user: { email: string; username: string }) => {
+export const generateTokenWithEmailAndUsername = (user: { email: string; username: string }) => {
   // Get the JWT secret from environment variables
   const jwtSecret = process.env.JWT_SECRET
 

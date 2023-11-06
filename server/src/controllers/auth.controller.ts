@@ -7,7 +7,7 @@ import catchAsyncError from '@/middleware/catch-async-error'
 import AuthService from '@/services/auth.service'
 import ErrorHandler from '@/utils/error-handler'
 import { calculateCookieExpiration } from '@/utils/helpers'
-import { generateToken } from '@/utils/jwt'
+import { generateTokenWithEmailAndUsername } from '@/utils/jwt'
 import {
   checkLoginRateByUsernameOrEmailAndIPAddress,
   consumeFailedAttemptForNonRegisteredUser,
@@ -23,10 +23,19 @@ class AuthController {
 
     const newUser = await AuthService.register({ email, password: hashedPassword, username })
 
-    const registerResponse = omit({ ...newUser }, ['password'])
+    const token = generateTokenWithEmailAndUsername(newUser)
+    const registerResponse = omit({ ...newUser, token }, ['password'])
+    const cookieExpiresIn = calculateCookieExpiration(10, 'min')
 
     const jsonResponse: APIResponse = { status: true, message: 'User Created Successfully', data: registerResponse }
-    res.status(201).json(jsonResponse)
+    res
+      .cookie('access_token', token, {
+        httpOnly: true,
+        expires: cookieExpiresIn,
+        path: '/'
+      })
+      .status(201)
+      .json(jsonResponse)
   })
 
   // Handle user login
@@ -84,9 +93,9 @@ class AuthController {
           await deleteFailedAttemptForRegisteredUserOnSuccessfulLogin(redisIdentifierKey, req.ip)
         }
 
-        const token = generateToken(user)
+        const token = generateTokenWithEmailAndUsername(user)
         const loginResponse = omit({ ...user, token }, ['password'])
-        const cookieExpiresIn = calculateCookieExpiration(1, 'min')
+        const cookieExpiresIn = calculateCookieExpiration(10, 'min')
 
         const loginJSONResponse: APIResponse = {
           status: true,

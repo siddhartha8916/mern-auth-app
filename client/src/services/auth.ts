@@ -9,11 +9,18 @@ const registerUser = async ({
 }: {
   body: { username: string; email: string; password: string };
 }): Promise<any> => {
-  const response = await apiClient.post(apiPaths.REGISTER, {
-    username,
-    email,
-    password,
-  });
+  const response = await apiClient.post(
+    apiPaths.REGISTER,
+    {
+      username,
+      email,
+      password,
+    },
+    {},
+    {
+      withCredentials: true,
+    }
+  );
 
   return response;
 };
@@ -27,10 +34,17 @@ const loginUser = async ({
 }: {
   body: { email: string; password: string };
 }): Promise<any> => {
-  const response = await apiClient.post(apiPaths.LOGIN, {
-    email,
-    password,
-  });
+  const response = await apiClient.post(
+    apiPaths.LOGIN,
+    {
+      email,
+      password,
+    },
+    {},
+    {
+      withCredentials: true,
+    }
+  );
 
   return response;
 };

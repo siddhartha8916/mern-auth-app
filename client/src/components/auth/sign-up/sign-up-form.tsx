@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRegister } from "@/services/auth";
 import { AxiosError } from "axios";
 import { toast } from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -31,6 +31,7 @@ const formSchema = z.object({
 const SignUpForm = () => {
   const { mutateAsync: registerUser, isLoading: isRegisterUserLoading } =
     useRegister();
+  const navigate = useNavigate();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,6 +54,7 @@ const SignUpForm = () => {
       });
       toast.success(response?.data?.message);
       form.reset();
+      navigate("/sign-in", { replace: true });
     } catch (error) {
       if (error instanceof AxiosError) {
         toast.error(error?.response?.data?.message || "Unable to create user");
